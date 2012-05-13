@@ -1,4 +1,5 @@
 require 'nokogiri'
+require File.dirname(__FILE__)+'/schema'
 
 module Xliff
     class Document
@@ -79,6 +80,33 @@ module Xliff
             end
         end
 
+        def validate(type = :transitional, xsd = nil)
+            throw Exception.new('type in validation must be only :transitional or :strict') if type != :transitional && type != :strict
+            if xsd.nil?
+                xsd = Xliff::Schema.get_schema(type)
+            elsif !xsd.is_a?(Nokogiri::XML::Schema)
+                throw Exception.new('XSD parameter must be a Nokogiri::XML::Schema instance')
+            end
+
+            #Nokogiri::XML::Schema(File.read((type == :transitional ? Xliff::Schema::V1_2_TRANSITIONAL : Xliff::Schema::V1_2_STRICT)))
+            error_count = 0
+            xsd.validate(@doc).each do |error|
+                puts error.message
+                error_count += 1
+            end
+            if error_count > 0
+                p "#{error_count} error(s) found"
+            else
+                p "No Error. The Xliff is valid in #{type.to_s} mode"
+            end
+            return (error_count == 0)
+        end
+
+        def self.validate(document_filepath, type = :transitional)
+            Xliff::Document.open(document_filepath) do |xliff_doc|
+                xliff.validate(type)
+            end
+        end
 
         def transunits(&block)
             units = Xliff::TransUnitCollection.new(@doc.xpath("//#{@namespace_xliff}trans-unit"), self, @namespace_xliff)
@@ -128,7 +156,7 @@ module Xliff
             unless @doc.errors.empty?
                 throw Exception.new('Can\'t save mal formed doc ' + @doc.errors)
             end
-            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['date'] = Time.new.to_s
+            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['date'] = Time.new.getutc.strftime('%FT%TZ')
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['product-name'] = File.basename(filepathname,'.xml')
             self.transunits.sort
             File.open(filepathname,'w') do |file|
@@ -198,19 +226,19 @@ module Xliff
         end
 
         def target_lang
-            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}/file").first['target-language']
+            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['target-language']
         end
 
         def target_lang=(lang)
-            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}/file").first['target-language'] = lang
+            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['target-language'] = lang
         end
 
         def source_lang
-            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}/file").first['source-language']
+            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['source-language']
         end
 
         def source_lang=(lang)
-            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}/file").first['source-language'] = lang
+            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['source-language'] = lang
         end
 
         def self.create(sourcel,targetl)
