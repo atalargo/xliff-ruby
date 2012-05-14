@@ -75,20 +75,6 @@ module Xliff
             @elem.xpath(".//#{@namespace}target").first.content
         end
 
-#         def note
-#             @unit.xpath(".//#{@namespace}note").first
-#         end
-#
-#         def note=(com)
-#             if self.note
-#                 self.note.content = com
-#             else
-#                 newnote = Nokogiri::XML::Node.new "note", @unit.document
-#                 newnote.content = com
-#                 @unit.add_child(newnote)
-#             end
-#         end
-
         def target=(tgt)
             @elem.xpath(".//#{@namespace}target").first.content = tgt
         end

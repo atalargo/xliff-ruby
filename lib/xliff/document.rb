@@ -11,6 +11,15 @@ module Xliff
 
         XLIFF_NS = 'urn:oasis:names:tc:xliff:document:1.2'
 
+        # Xliff::Document constructor.
+        # To open an existant xliff document, you can pass a filepathname, with or not a 2nd parameter to inform some options for create new unit etc.
+        # To create a new one, you can give a hash option with
+        # * :target_lang
+        # * :source_lang
+        # * :datatype
+        # * :original
+        # * :filepathname (to save the document later but not mandatory see method #save_to )
+        # * :prefix_id to indicate a prefix setted on new unit created
         def initialize(filepathname = nil, options_create = nil)
             @namespace_xliff = nil
 
@@ -87,6 +96,7 @@ module Xliff
             @namespace_xliff += ':'
         end
 
+        # Class method to open a given filepathname and execute a block on it if given, or return the xliff document instance if no block
         def self.open(filepathname, &block)
             xliff = Xliff::Document.new(filepathname)
             if block.nil?
@@ -96,6 +106,10 @@ module Xliff
             end
         end
 
+        # Mehod to validate the current xliff document to on of available XML Schema of Xliff norm. transitional or strict.
+        # Parameters are
+        # * type :transitional by default but could be :strict
+        # * xsd optional parameter. If given it muse be an instance of Nokigiri::XML::Schema for Xliff Schema. You could obtain an instance of the class for xliff schema by methos of #Xliff::Schema
         def validate(type = :transitional, xsd = nil)
             throw Exception.new('type in validation must be only :transitional or :strict') if type != :transitional && type != :strict
             if xsd.nil?
@@ -117,12 +131,17 @@ module Xliff
             return (error_count == 0)
         end
 
+        # Class method to valide a xliff file file path given with XSD type given.
+        # See #validate method
         def self.validate(document_filepath, type = :transitional)
             Xliff::Document.open(document_filepath) do |xliff_doc|
                 xliff.validate(type)
             end
         end
 
+        # Get all transunits of the document.
+        #
+        # Return a #Xliff::TransUnitCollection instance if not block used, or call block on each instance of transunits
         def transunits(&block)
             units = Xliff::TransUnitCollection.new(@doc.xpath("//#{@namespace_xliff}trans-unit"), self, @namespace_xliff)
             unless block.nil?
@@ -134,45 +153,16 @@ module Xliff
             end
         end
 
-#         def unit(idunit)
-#             elem = @doc.xpath("//#{@namespace_xliff}trans-unit[@id=$value]", nil, {:value => idunit.to_s}).first
-#             unless elem.nil?
-#                 return Xliff::TransUnit.new(elem, @namespace_xliff)
-#             else
-#                 nil
-#             end
-#         end
-#
-#         def unit_by_source(src)
-#             elem = @doc.xpath("//#{@namespace_xliff}trans-unit/#{@namespace_xliff}source[. =$value]/..", nil, {:value => src}).first
-#             unless elem.nil?
-#                 return Xliff::TransUnit.new(elem, @namespace_xliff)
-#             else
-#                 nil
-#             end
-#         end
-#
-#         def add_unit(unitid, src, tgt, approved, comment = nil)
-#             newunit = Xliff::TransUnit.create(@doc, @namespace_xliff)
-#             newunit.unitid = unitid
-#             newunit.source = src
-#             newunit.target = tgt
-#             newunit.approved = approved
-#             newunit.comment = comment
-#             if @doc.xpath("//#{@namespace_xliff}trans-unit").last.nil?
-#                 @doc.xpath("//#{@namespace_xliff}body").last.add_child(newunit.node)
-#             else
-#                 @doc.xpath("//#{@namespace_xliff}trans-unit").last.add_next_sibling(newunit.node)
-#             end
-#             newunit
-#         end
-
+        # Save current Xliff Document to file pathname. If file pathname given not finished by '.xlf' (the standard extension for xliff files), the method add it.
         def save_to(filepathname)
             unless @doc.errors.empty?
                 throw Exception.new('Can\'t save mal formed doc ' + @doc.errors)
             end
+
+            filepathname +='.xlf' if /\.xlf$/ !~ filepathname
+
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['date'] = Time.new.getutc.strftime('%FT%TZ')
-            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['product-name'] = File.basename(filepathname,'.xml')
+            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['product-name'] = File.basename(filepathname,'.xlf')
             self.transunits.sort
             File.open(filepathname,'w') do |file|
                 file << @doc.to_xml(:encoding => 'UTF-8', :indent => 2, :indent_text => "\n")
@@ -180,13 +170,14 @@ module Xliff
             @filepathname = filepathname
         end
 
+        # Save current Xliff document for the already setted file path (already call to #save_to method or if opened already exists Xliff )
         def save
             self.save_to(@filepathname)
         end
 
         #
-        # if replace_same_id == true, replace node in self by the one from xliff_from if unitid of both equal, if not append with new available id
-        # if replace_same_id == false, if same id, not replace, if id from xliff_from not exists, append in self, with new id available in self
+        # * if replace_same_id == true, replace node in self by the one from xliff_from if unitid of both equal, if not append with new available id
+        # * if replace_same_id == false, if same id, not replace, if id from xliff_from not exists, append in self, with new id available in self
         #
         def merge_by_id(xliff_from, replace_same_id = false)
             #ensure order from and self
@@ -212,9 +203,10 @@ module Xliff
 
             end
         end
+
         #
-        # if replace_same_source == true, replace target in self by the one from xliff_from if source of both equal, if not append with new available id
-        # if replace_same_source == false, if same id, not replace, if source from xliff_from not exists, append in self, with new id available in self
+        # * if replace_same_source == true, replace target in self by the one from xliff_from if source of both equal, if not append with new available id
+        # * if replace_same_source == false, if same id, not replace, if source from xliff_from not exists, append in self, with new id available in self
         #
         def merge_by_source(xliff_from, replace_same_source = false)
             #ensure order from and self
@@ -240,30 +232,41 @@ module Xliff
             end
         end
 
+
+        # Get target language for file tag
         def target_lang
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['target-language']
         end
 
+        # Set target language for file tag
         def target_lang=(lang)
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['target-language'] = lang
         end
 
+        # Get source language for file tag
         def source_lang
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['source-language']
         end
 
+        # Set source language for file tag
         def source_lang=(lang)
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['source-language'] = lang
         end
 
-        def self.create(sourcel,targetl)
+        #
+        # Class method to create new instance for new Xliff doc with source language (sourcel) and target language (targetl) parameters.
+        # It's an alias of Xliff.Document.new with less options available
+        #
+        def self.create(sourcel, targetl)
             Xliff::Document.new({:source_lang => sourcel, :target_lang => targetl})
         end
 
+        # Get the body tag of first file tag
         def body
             @doc.xpath("//#{@namespace_xliff}body").first
         end
 
+        # Reindex all the trans-units from 1 to X, with prefix given in new method option, or '' if not prefix given
         def reindex(prefix_id = nil)
             tuid = 1
             self.transunits.each do |unit|
@@ -272,6 +275,7 @@ module Xliff
             end
         end
 
+        # Get the schema version use by the current Xliff Document or transitional if not schema indicate in document
         def schema
             if @doc.root['xsi:schemaLocation'] == Xliff::Schema::V1_2_STRICT_LOCATION
                 return :strict
@@ -280,6 +284,11 @@ module Xliff
             end
         end
 
+        # Set the schema version for the current document.
+        #
+        # Type parameter could be :
+        # * :transitional for http://docs.oasis-open.org/xliff/v1.2/cs02/xliff-core-1.2-strict.xsd
+        # * :strict for http://docs.oasis-open.org/xliff/v1.2/cs02/xliff-core-1.2-transitional.xsd'
         def schema=(type)
             if type == :transitional
                 @doc.xpath("/#{@namespace_xliff}xliff").first['xsi:schemaLocation'] = Xliff::Schema::V1_2_TRANSITIONAL_LOCATION

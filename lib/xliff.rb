@@ -1,3 +1,6 @@
+# :title: Xliff-Ruby
+# :main: lib/xliff.rb
+# :include: ../README.md
 module Xliff
     VERSION = '0.1.1'
 end
