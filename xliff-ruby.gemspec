@@ -10,7 +10,6 @@ Gem::Specification.new do |s|
     s.summary     = %q{Xliff parser and generator for ruby}
     s.description = %q{This gem provide a parser and a generator lib for Xliff  (XML Localization Interchange File Format) version 1.2 of the XML schema}
 
-    s.rubyforge_project = "string_to_sha1"
 
     s.files         = `git ls-files`.split("\n")
     s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
