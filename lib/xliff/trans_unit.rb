@@ -39,9 +39,10 @@ module Xliff
 
     class TransUnit
         include Comparable
+        include Xliff::Notable
 
         def initialize(nokigiriunit = nil, namespace = nil)
-            @unit = nokigiriunit
+            @elem = nokigiriunit
             @namespace = namespace
         end
 
@@ -63,49 +64,58 @@ module Xliff
         end
 
         def unitid
-            @unit['id']
+            @elem['id']
         end
 
         def source
-            @unit.xpath(".//#{@namespace}source").first.content
+            @elem.xpath(".//#{@namespace}source").first.content
         end
 
         def target
-            @unit.xpath(".//#{@namespace}target").first.content
+            @elem.xpath(".//#{@namespace}target").first.content
         end
 
-        def comment
-        end
+#         def note
+#             @unit.xpath(".//#{@namespace}note").first
+#         end
+#
+#         def note=(com)
+#             if self.note
+#                 self.note.content = com
+#             else
+#                 newnote = Nokogiri::XML::Node.new "note", @unit.document
+#                 newnote.content = com
+#                 @unit.add_child(newnote)
+#             end
+#         end
 
         def target=(tgt)
-            @unit.xpath(".//#{@namespace}target").first.content = tgt
+            @elem.xpath(".//#{@namespace}target").first.content = tgt
         end
 
         def source=(src)
-            @unit.xpath(".//#{@namespace}source").first.content = src
+            @elem.xpath(".//#{@namespace}source").first.content = src
         end
 
         def unitid=(uid)
-            @unit['id'] = uid.to_s
+            @elem['id'] = uid.to_s
         end
 
-        def comment=(com)
-        end
 
         def <=>(b)
             self.unitid.to_i <=> b.unitid.to_i
         end
 
         def node
-            @unit
+            @elem
         end
 
         def approved?
-            return !(@unit['approved'].nil? || @unit['approved'] == 'no')
+            return !(@elem['approved'].nil? || @elem['approved'] == 'no')
         end
 
         def approved=(approve)
-            @unit['approved'] = (approve ? 'yes' : 'no')
+            @elem['approved'] = (approve ? 'yes' : 'no')
         end
 
     end

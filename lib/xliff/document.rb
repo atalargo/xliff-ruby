@@ -1,8 +1,13 @@
 require 'nokogiri'
+require File.dirname(__FILE__)+'/collection'
+require File.dirname(__FILE__)+'/notable'
+require File.dirname(__FILE__)+'/group'
 require File.dirname(__FILE__)+'/schema'
 
 module Xliff
     class Document
+
+        include Xliff::Collection
 
         XLIFF_NS = 'urn:oasis:names:tc:xliff:document:1.2'
 
@@ -12,6 +17,13 @@ module Xliff
             if filepathname && filepathname.is_a?(String)
                 @doc = Nokogiri::XML(File.open(filepathname))
                 unless @doc.errors.empty?
+                    @doc.errors.each do |err|
+                        p err
+                        p err.line
+                        p err.column
+                        p err.str1
+                        p err.str2
+                    end
                     throw Exception.new('XML parsing error in file "'+filepathname+'" : '+@doc.errors.join("\n"))
                 end
                 if @doc.namespaces.length > 0
@@ -30,7 +42,7 @@ module Xliff
                         "-//XLIFF//DTD XLIFF//EN",
                         "http://www.oasis-open.org/committees/xliff/documents/xliff.dtd"
                     )
-                    xml.xliff(:version => "1.2", :xmlns => Xliff::Document::XLIFF_NS) {
+                    xml.xliff(:version => "1.2", :xmlns => Xliff::Document::XLIFF_NS, 'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => Xliff::Schema::V1_2_STRICT_LOCATION) {
                         xml.file(:datatype => 'plaintext', :original => '') {
                                 xml.header {}
                                 xml.body {}
@@ -50,7 +62,11 @@ module Xliff
                 @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['datatype'] = options_create[:datatype] if options_create[:datatype]
                 @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['original'] = options_create[:original] if options_create[:original]
                 @filepathname = options_create[:filepathname] if options_create[:filepathname]
+
             end
+            @elem = @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file/#{@namespace_xliff}body").first
+            @parent = @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first
+
             if options_create && !options_create[:prefix_id].nil?
                 @prefix_id = options_create[:prefix_id]
             else
@@ -88,7 +104,6 @@ module Xliff
                 throw Exception.new('XSD parameter must be a Nokogiri::XML::Schema instance')
             end
 
-            #Nokogiri::XML::Schema(File.read((type == :transitional ? Xliff::Schema::V1_2_TRANSITIONAL : Xliff::Schema::V1_2_STRICT)))
             error_count = 0
             xsd.validate(@doc).each do |error|
                 puts error.message
@@ -119,38 +134,38 @@ module Xliff
             end
         end
 
-        def unit(idunit)
-            elem = @doc.xpath("//#{@namespace_xliff}trans-unit[@id=$value]", nil, {:value => idunit.to_s}).first
-            unless elem.nil?
-                return Xliff::TransUnit.new(elem, @namespace_xliff)
-            else
-                nil
-            end
-        end
-
-        def unit_by_source(src)
-            elem = @doc.xpath("//#{@namespace_xliff}trans-unit/#{@namespace_xliff}source[. =$value]/..", nil, {:value => src}).first
-            unless elem.nil?
-                return Xliff::TransUnit.new(elem, @namespace_xliff)
-            else
-                nil
-            end
-        end
-
-        def add_unit(unitid, src, tgt, approved, comment = nil)
-            newunit = Xliff::TransUnit.create(@doc, @namespace_xliff)
-            newunit.unitid = unitid
-            newunit.source = src
-            newunit.target = tgt
-            newunit.approved = approved
-            newunit.comment = comment
-            if @doc.xpath("//#{@namespace_xliff}trans-unit").last.nil?
-                @doc.xpath("//#{@namespace_xliff}body").last.add_child(newunit.node)
-            else
-                @doc.xpath("//#{@namespace_xliff}trans-unit").last.add_next_sibling(newunit.node)
-            end
-            newunit
-        end
+#         def unit(idunit)
+#             elem = @doc.xpath("//#{@namespace_xliff}trans-unit[@id=$value]", nil, {:value => idunit.to_s}).first
+#             unless elem.nil?
+#                 return Xliff::TransUnit.new(elem, @namespace_xliff)
+#             else
+#                 nil
+#             end
+#         end
+#
+#         def unit_by_source(src)
+#             elem = @doc.xpath("//#{@namespace_xliff}trans-unit/#{@namespace_xliff}source[. =$value]/..", nil, {:value => src}).first
+#             unless elem.nil?
+#                 return Xliff::TransUnit.new(elem, @namespace_xliff)
+#             else
+#                 nil
+#             end
+#         end
+#
+#         def add_unit(unitid, src, tgt, approved, comment = nil)
+#             newunit = Xliff::TransUnit.create(@doc, @namespace_xliff)
+#             newunit.unitid = unitid
+#             newunit.source = src
+#             newunit.target = tgt
+#             newunit.approved = approved
+#             newunit.comment = comment
+#             if @doc.xpath("//#{@namespace_xliff}trans-unit").last.nil?
+#                 @doc.xpath("//#{@namespace_xliff}body").last.add_child(newunit.node)
+#             else
+#                 @doc.xpath("//#{@namespace_xliff}trans-unit").last.add_next_sibling(newunit.node)
+#             end
+#             newunit
+#         end
 
         def save_to(filepathname)
             unless @doc.errors.empty?
@@ -160,7 +175,7 @@ module Xliff
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['product-name'] = File.basename(filepathname,'.xml')
             self.transunits.sort
             File.open(filepathname,'w') do |file|
-                file << @doc.to_xml(:encoding => 'UTF-8', :indent => 2)
+                file << @doc.to_xml(:encoding => 'UTF-8', :indent => 2, :indent_text => "\n")
             end
             @filepathname = filepathname
         end
@@ -255,6 +270,25 @@ module Xliff
                 unit.unitid = "#{prefix_id}#{tuid}"
                 tuid += 1
             end
+        end
+
+        def schema
+            if @doc.root['xsi:schemaLocation'] == Xliff::Schema::V1_2_STRICT_LOCATION
+                return :strict
+            else
+                return :transitional
+            end
+        end
+
+        def schema=(type)
+            if type == :transitional
+                @doc.xpath("/#{@namespace_xliff}xliff").first['xsi:schemaLocation'] = Xliff::Schema::V1_2_TRANSITIONAL_LOCATION
+            elsif type == :strict
+                @doc.xpath("/#{@namespace_xliff}xliff").first['xsi:schemaLocation'] = Xliff::Schema::V1_2_STRICT_LOCATION
+            else
+                throw Exception.new('Only strict or transitional type of XLIFF schema are accepted')
+            end
+            @doc.xpath("/#{@namespace_xliff}xliff").first['xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance'
         end
     end
 end
