@@ -2,7 +2,7 @@
 # :main: lib/xliff.rb
 # :include: ../README.md
 module Xliff
-    VERSION = '0.1.2.1'
+    VERSION = '0.1.2.4'
 end
 
 require File.dirname(__FILE__)+"/xliff/document"

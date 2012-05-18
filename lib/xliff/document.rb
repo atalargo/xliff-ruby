@@ -50,7 +50,7 @@ module Xliff
                         "-//XLIFF//DTD XLIFF//EN",
                         "http://www.oasis-open.org/committees/xliff/documents/xliff.dtd"
                     )
-                    xml.xliff(:version => "1.2", :xmlns => Xliff::Document::XLIFF_NS, 'xsi:schemaLocation' => Xliff::Schema::V1_2_STRICT_LOCATION) {
+                    xml.xliff(:version => "1.2", :xmlns => Xliff::Document::XLIFF_NS, 'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance','xsi:schemaLocation' => Xliff::Schema::V1_2_STRICT_LOCATION) {
                         xml.file(:datatype => 'plaintext', :original => '') {
                                 xml.header {}
                                 xml.body {}
@@ -155,7 +155,7 @@ module Xliff
         # Save current Xliff Document to file pathname. If file pathname given not finished by '.xlf' (the standard extension for xliff files), the method add it.
         def save_to(filepathname)
             unless @doc.errors.empty?
-                throw Exception.new('Can\'t save mal formed doc ' + @doc.errors)
+                throw Exception.new('Can\'t save mal formed doc ' + @doc.errors.join("\n"))
             end
 
             filepathname +='.xlf' if /\.xlf$/ !~ filepathname

@@ -47,7 +47,7 @@ module Xliff
             newunit.source = src
             newunit.target = tgt
             newunit.approved = approved
-            newunit.note = comment unless note.nil?
+            newunit.note = comment unless comment.nil?
             if @elem.xpath("./#{@namespace_xliff}trans-unit").last.nil?
                 @elem.add_child(newunit.node)
             else
