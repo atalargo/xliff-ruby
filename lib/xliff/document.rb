@@ -22,7 +22,6 @@ module Xliff
         # * :prefix_id to indicate a prefix setted on new unit created
         def initialize(filepathname = nil, options_create = nil)
             @namespace_xliff = nil
-
             if filepathname && filepathname.is_a?(String)
                 @doc = Nokogiri::XML(File.open(filepathname))
                 unless @doc.errors.empty?
@@ -51,7 +50,7 @@ module Xliff
                         "-//XLIFF//DTD XLIFF//EN",
                         "http://www.oasis-open.org/committees/xliff/documents/xliff.dtd"
                     )
-                    xml.xliff(:version => "1.2", :xmlns => Xliff::Document::XLIFF_NS, 'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance', 'xsi:schemaLocation' => Xliff::Schema::V1_2_STRICT_LOCATION) {
+                    xml.xliff(:version => "1.2", :xmlns => Xliff::Document::XLIFF_NS, 'xsi:schemaLocation' => Xliff::Schema::V1_2_STRICT_LOCATION) {
                         xml.file(:datatype => 'plaintext', :original => '') {
                                 xml.header {}
                                 xml.body {}
@@ -165,7 +164,13 @@ module Xliff
             @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first['product-name'] = File.basename(filepathname,'.xlf')
             self.transunits.sort
             File.open(filepathname,'w') do |file|
-                file << @doc.to_xml(:encoding => 'UTF-8', :indent => 2, :indent_text => "\n")
+                file << (@doc.to_xml({:encoding => 'UTF-8', :indent => 5}).gsub(
+                                                '<trans-unit ',"\n        <trans-unit ").gsub(
+                                                '<source',"\n          <source").gsub(
+                                                '<target',"\n          <target").gsub(
+                                                '<note',"\n          <note").gsub(
+                                                '</trans-unit>',"\n        </trans-unit>\n").gsub(/\n?<\/body>/,"\n    </body>").gsub(/\n\s*\n/,"\n")
+                        )
             end
             @filepathname = filepathname
         end
@@ -290,14 +295,16 @@ module Xliff
         # * :transitional for http://docs.oasis-open.org/xliff/v1.2/cs02/xliff-core-1.2-strict.xsd
         # * :strict for http://docs.oasis-open.org/xliff/v1.2/cs02/xliff-core-1.2-transitional.xsd'
         def schema=(type)
-            if type == :transitional
+            if type == :transitional && schema() != :transitional
                 @doc.xpath("/#{@namespace_xliff}xliff").first['xsi:schemaLocation'] = Xliff::Schema::V1_2_TRANSITIONAL_LOCATION
-            elsif type == :strict
+            elsif type == :strict && schema() != :strict
                 @doc.xpath("/#{@namespace_xliff}xliff").first['xsi:schemaLocation'] = Xliff::Schema::V1_2_STRICT_LOCATION
-            else
+            elsif [:transitional, :strict].index(type).nil?
                 throw Exception.new('Only strict or transitional type of XLIFF schema are accepted')
             end
-            @doc.xpath("/#{@namespace_xliff}xliff").first['xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance'
+            if @doc.xpath("/#{@namespace_xliff}xliff").first.namespaces()['xmlns:xsi'].nil?
+                @doc.xpath("/#{@namespace_xliff}xliff").first['xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance'
+            end
         end
     end
 end
