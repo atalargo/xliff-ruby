@@ -2,7 +2,7 @@ $:.push File.dirname(__FILE__)+'/lib/'
 require "xliff"
 
 Gem::Specification.new do |s|
-    s.name        = "xliff-ruby"
+    s.name        = "xliff"
     s.version     = Xliff::VERSION
     s.authors     = ["Florent Ruard-Dumaine"]
     s.email       = ["florent.ruard-dumaine@iscool-e.com"]

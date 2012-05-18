@@ -1,8 +1,8 @@
 require 'nokogiri'
-require File.dirname(__FILE__)+'/collection'
-require File.dirname(__FILE__)+'/notable'
-require File.dirname(__FILE__)+'/group'
-require File.dirname(__FILE__)+'/schema'
+require 'xliff/collection'
+require 'xliff/notable'
+require 'xliff/group'
+require 'xliff/schema'
 
 module Xliff
     class Document
