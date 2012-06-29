@@ -1,6 +1,7 @@
 require 'nokogiri'
 require 'xliff/collection'
 require 'xliff/notable'
+require 'xliff/file'
 require 'xliff/group'
 require 'xliff/schema'
 
@@ -237,6 +238,19 @@ module Xliff
             end
         end
 
+        #return the first file tag
+        def file
+            Xliff::File.new(@doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").first, @doc, @namespace_xliff, @doc.xpath("/#{@namespace_xliff}xliff").first))
+        end
+
+        #return array of all file tags
+        def files
+            @doc.xpath("/#{@namespace_xliff}xliff/#{@namespace_xliff}file").map{|ft| Xliff::File.new(ft, @doc, @namespace_xliff, @doc.xpath("/#{@namespace_xliff}xliff").first)}
+        end
+
+        def add_file(attributes = {})
+            Xliff::File.create(@doc, @namespace_xliff, attributes, @doc.xpath("/#{@namespace_xliff}xliff/"))
+        end
 
         # Get target language for file tag
         def target_lang
