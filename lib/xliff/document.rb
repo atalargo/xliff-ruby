@@ -199,7 +199,9 @@ module Xliff
                         existsalready.target = unit.target
                     end
                 else
-                    lastid = last.unitid.succ
+                    vid = last.unitid.gsub(/[a-zA-Z\-_]*/,'').to_i
+                    lastid = last.unitid.sub(/#{vid}/, "#{vid.succ}")
+
                     ntu = Xliff::TransUnit.dup(@doc, unit, @namespace_xliff)
                     ntu.unitid = lastid
                     last.node.add_next_sibling(ntu.node)
@@ -227,7 +229,9 @@ module Xliff
                         existsalready.target = unit.target
                     end
                 else
-                    lastid = last.unitid.succ
+                    vid = last.unitid.gsub(/[a-zA-Z\-_]*/,'').to_i
+                    lastid = last.unitid.sub(/#{vid}/, "#{vid.succ}")
+
                     ntu = Xliff::TransUnit.dup(@doc, unit, @namespace_xliff)
                     ntu.unitid = lastid
                     last.node.add_next_sibling(ntu.node)
