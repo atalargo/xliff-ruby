@@ -215,7 +215,7 @@ module Xliff
         # * if replace_same_source == true, replace target in self by the one from xliff_from if source of both equal, if not append with new available id
         # * if replace_same_source == false, if same id, not replace, if source from xliff_from not exists, append in self, with new id available in self
         #
-        def merge_by_source(xliff_from, replace_same_source = false)
+        def merge_by_source(xliff_from, replace_same_source = false, replace_same_target = false)
             #ensure order from and self
             xliff_from.transunits.sort
             self.transunits.sort
@@ -224,7 +224,7 @@ module Xliff
             xliff_from.transunits.each do |unit|
                 existsalready = self.unit_by_source(unit.source)
                 if existsalready
-                    if replace_same_source
+                    if replace_same_source #&& !replace_same_target
                         existsalready.approved = false if existsalready.target != unit.target
                         existsalready.target = unit.target
                     end
